@@ -1,0 +1,203 @@
+<style>
+  .cell {
+    width: 100px;
+    height: 100px;
+    background-color: green;
+    display: inline-block;
+    border: solid 1px white;
+    vertical-align: middle;
+    line-height: 100px;
+    font-size: 50px;
+    text-align: center;
+  }
+</style>
+
+<div id="board"></div>
+
+<script>
+  /* 有三种方式表达棋盘，一维数组（最好），二维组数（符合人类思维），map */
+  /* 棋盘有三种状态，0，1，2 */
+  let pattern = [
+    [2, 0, 0],
+    [0, 1, 0],
+    [0, 0, 0]
+  ]
+
+  let color = 1;
+
+    function show() {
+      let board = document.getElementById("board");
+  
+      board.innerHTML = "";
+  
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          let cell = document.createElement("div");
+          cell.classList.add("cell");
+          //棋盘每个位置有三种状态，0，1，2
+          cell.innerText = pattern[i][j] == 2 ? "X" :
+            pattern[i][j] == 1 ? "O" : "";
+          //监听点击事件，j是x轴，i是y轴
+          cell.addEventListener("click", () => userMove(j, i));
+          board.appendChild(cell);
+        }
+        board.appendChild(document.createElement("br"))
+      }
+    }
+
+  function userMove(x, y) {
+    if (pattern[y][x] !== 0)
+      return;
+    pattern[y][x] == color;
+    if (check(pattern, color)) {
+      alert(color == 2 ? "X is winner" : "O is winner");
+    }
+    color = 3 - color; //也可以用 2 /  ，这种就是取模
+    show();
+    computedMove();
+    if (willWin(pattern, color)) {
+      console.log(color == 2 ? "X will win" : "O will win");
+    }
+  }
+
+  function computedMove() {
+    let choice = bestChoice(pattern, color);
+    if(choice.point) {
+      pattern[choice.point[1]][choice.point[0]] = color;
+    }
+    if (check(pattern, color)) {
+      alert(color == 2 ? "X is winner" : "O is winner");
+    }
+    color = 3 - color;
+    show();
+  }
+
+  function check(pattern, color) {
+    //判断横向
+    for (let i = 0; i < 3; i++) {
+      let win = true;
+      for (let j = 0; j < 3; j++) {
+        if (pattern[i][j] !== color) {
+          win = false;
+        }
+      }
+      if (win) {
+        return true;
+      }
+    }
+    //判断纵向
+    for (let i = 0; i < 3; i++) {
+      let win = true;
+      for (let j = 0; j < 3; j++) {
+        if (pattern[j][i] !== color) {
+          win = false;
+        }
+      }
+      if (win) {
+        return true;
+      }
+    }
+    //判断左上到右下斜向，加花括号是为了win不影响其它代码
+    {
+      let win = true;
+      for (let j = 0; j < 3; j++) {
+        if (pattern[j][j] !== color) {
+          win = false;
+        }
+      }
+      if (win) {
+        return true;
+      }
+    }
+    //判断右上到左下斜向
+    {
+      let win = true;
+      for (let j = 0; j < 3; j++) {
+        if (pattern[j][2 - j] !== color) {
+          win = false;
+        }
+      }
+      if (win) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  //复制 pattern
+  function clone(pattern) {
+    return JSON.parse(JSON.stringify(pattern));
+  }
+
+  function willWin(pattern, color) {
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        if (pattern[i][j] !== 0) {
+          continue;
+        }
+        let tmp = clone(pattern);
+        tmp[i][j] = color;
+        if (check(tmp, color)) {
+          return [j, i];
+        }
+      }
+    }
+    return null;
+  }
+
+  // 棋谱
+    let openings = new Map();
+
+    openings.set([
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0]
+    ].toString(), {
+      point: [1, 1],
+      result: 0
+    })
+  
+  function bestChoice(pattern, color) {
+    let point = willWin(pattern, color)
+    //如果有point，说明要赢了
+    if(point) {
+      return {
+        point: point,
+        result: 1
+      }
+    }
+    //这个循环就是模拟每一个点我落子之后，对手的bestChoice是什么
+    let result = -1;
+    outer: for(let i = 0; i < 3; i++) {
+       for (let j = 0; j < 3; j++) {
+        if(pattern[i][j] !== 0) {
+          continue;
+        }
+        let tmp = clone(pattern);
+        tmp[i][j] = color;
+        //递归，要知道终止条件是什么，opp代表对手
+        let opp = bestChoice(tmp, 3-color);
+        //对手和我相反，所以是 -
+        //对手的bestChoice最差的结果，就是我想要的结果
+        if(- opp.result >= result) {
+          //因为j是x轴，i是y轴，所以这里是[j][i]
+          point = [j][i];
+          result = -opp.result;
+        }
+        if(result == 1) {
+          break outer;
+        }
+      }
+    }
+    return {
+      //坐标
+      point: point,
+      //-1为输，0为平，1为赢
+      //如果有point，则是result，如果没有point，则是平局
+      result: point ? result : 0
+    }
+  }
+
+  show();
+  console.log(pattern);
+</script>
